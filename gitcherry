@@ -1,0 +1,64 @@
+#!/bin/sh
+
+
+#
+# get CMD options
+#
+if [ $# -lt 1 ]
+then
+	echo "No SHA givven" >&2
+	exit 1
+fi
+SHA=$1
+
+
+
+#
+# get commit data from log
+#
+log_message=$(git log -1 $SHA)
+if [ ! $? -eq 0 ]
+then
+	echo "Could not find givven SHA" >&2
+	exit 1
+fi
+
+GIT_DATE=$(printf "$log_message" | grep "^Date:" | cut -c 9-)
+GIT_AUTHOR=$(printf "$log_message" | grep "^Author:" | cut -c 9- | cut -d'<' -f1)
+GIT_EMAIL=$(printf "$log_message" | grep "^Author:" | cut -c 9- | cut -d'<' -f2 | cut -d'>' -f1)
+
+
+# set commit environment
+export GIT_COMMITTER_DATE="$GIT_DATE"
+export GIT_COMMITTER_NAME="$GIT_AUTHOR"
+export GIT_COMMITTER_EMAIL="$GIT_EMAIL"
+
+
+if [ -z $2 ]
+then
+	# cherry pick
+	git cherry-pick $SHA
+
+	if [ $? -eq 0 ]
+	then
+		exit 0
+	fi
+else
+	if [ $2 != "info" ]
+	then
+		# cherry pick
+		git cherry-pick --no-commit $SHA
+		git reset HEAD * 2>&1 > /dev/null
+
+		# print git status
+		git status
+	fi
+fi
+
+
+# print information for commit
+echo ""
+echo "export GIT_COMMITTER_DATE=\"$GIT_DATE\""
+echo "export GIT_COMMITTER_NAME=\"$GIT_AUTHOR\""
+echo "export GIT_COMMITTER_EMAIL=\"$GIT_EMAIL\""
+echo "git commit --date=\"$GIT_DATE\" --author=\"$GIT_AUTHOR <$GIT_EMAIL>\""
