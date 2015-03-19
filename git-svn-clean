@@ -1,0 +1,5 @@
+#!/bin/sh
+
+git filter-branch --msg-filter '
+	sed -e "/^git-svn-id:/d"
+' -f --prune-empty
