@@ -13,4 +13,4 @@
 #   [options] may be any option, that is available for git filter-branch
 
 # run git filter-branch
-eval git filter-branch --msg-filter "\"sed -e \"/^git-svn-id:/d\"\"" $@
+eval git filter-branch --msg-filter "\"sed -e \"/^git-svn-id:/d\"\"" --tag-name-filter cat $@
