@@ -1,5 +1,16 @@
 #!/bin/sh
 
-git filter-branch --msg-filter '
-	sed -e "/^git-svn-id:/d"
-' -f --prune-empty
+# This tool rewrites the commit messages and deletes the "git-svn-id" line.
+#
+# NOTE: This tool uses git filter-branch and WILL REWRITE YOUR HISTORY! Make a
+#   copy before using this tool! Colaborators have to clone your repository new!
+#   If you don't like this behaviour, DON'T USE THIS TOOL!
+#
+
+# Usage:
+#   git svn-clean [options]
+#
+#   [options] may be any option, that is available for git filter-branch
+
+# run git filter-branch
+eval git filter-branch --msg-filter "\"sed -e \"/^git-svn-id:/d\"\"" $@
