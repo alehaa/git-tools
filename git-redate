@@ -1,0 +1,58 @@
+#!/bin/sh
+
+# This tool rewrites the committer date with the author date or he other way
+# around.
+#
+# This feature can be used, to rewrite commits which have been commited with a
+# wrong date or if a commit was committed at a later time (e.g. cherry pick).
+# If you need the other way around, you can overwrite the author-date by the
+# committer date by using the -c flag.
+#
+# NOTE: This tool uses git filter-branch and WILL REWRITE YOUR HISTORY! Make a
+#   copy before using this tool! Colaborators have to clone your repository new!
+#   If you don't like this behaviour, DON'T USE THIS TOOL!
+#
+
+
+#
+# configuration
+#
+MODE="author-date"
+
+
+#
+# read command line options
+#
+while getopts ":c" opt; do
+	case $opt in
+		c)
+			export MODE="committer-date"
+		;;
+
+		\?)
+			echo "Invalid option: -$OPTARG" >&2
+			exit 1
+		;;
+	esac
+done
+
+# shift for optional arguments for git filter-branch
+shift $((OPTIND-1))
+
+
+
+if [ "$MODE" == "author-date" ]
+then
+	# overwrite committer-date by author-date
+	git filter-branch --env-filter 'GIT_COMMITTER_DATE="$GIT_AUTHOR_DATE"' $@
+
+elif [ "$MODE" == "committer-date" ]
+then
+	# overwrite author-date by committer-date
+	git filter-branch --env-filter 'GIT_AUTHOR_DATE="$GIT_COMMITTER_DATE"' $@
+
+else
+	# we have an unknown mode
+	echo "error: unknown mode '$MODE'" >&2
+	exit 1
+fi
