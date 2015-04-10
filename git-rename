@@ -1,0 +1,144 @@
+#!/bin/sh
+
+# This tool rewrite the commiter names and email addresses to new names.
+#
+# This feature can be used, to rewrite commits from git environments, where
+# usernames or invalid values have been used. SVN usernames can be set to valid
+# git values and it can even be used, if you email-address has been changed.
+#
+# NOTE: This tool uses git filter-branch and WILL REWRITE YOUR HISTORY! Make a
+#   copy before using this tool! Colaborators have to clone your repository new!
+#   If you don't like this behaviour, DON'T USE THIS TOOL!
+#
+
+
+#
+# read command line options
+#
+while getopts ":n:N:m:M:" opt; do
+	case $opt in
+		n)
+			if [ -n "$SEARCH_EMAIL" ]
+			then
+				echo "Error: You can only search for name OR email!" >&2
+				exit 1
+			fi
+
+			export SEARCH_NAME="$OPTARG"
+		;;
+
+		m)
+			if [ -n "$SEARCH_NAME" ]
+			then
+				echo "Error: You can only search for name OR email!" >&2
+				exit 1
+			fi
+
+			export SEARCH_EMAIL="$OPTARG"
+		;;
+
+		N) export NEW_NAME="$OPTARG" ;;
+		M) export NEW_EMAIL="$OPTARG" ;;
+
+		\?)
+			echo "Invalid option: -$OPTARG" >&2
+			exit 1
+		;;
+
+		:)
+			echo "Option -$OPTARG requires an argument." >&2
+			exit 1
+		;;
+	esac
+done
+
+# shift for optional arguments for git filter-branch
+shift $((OPTIND-1))
+
+
+# has new data been set?
+if [ -z "$NEW_NAME" ]
+then
+	echo "Error: you have to set a new name!" >&2
+	exit 1
+fi
+
+if [ -z "$NEW_EMAIL" ]
+then
+	echo "Error: you have to set a new email!" >&2
+	exit 1
+fi
+
+
+
+#
+# replace data
+#
+if [ -n "$SEARCH_NAME" ]
+then
+	git filter-branch --env-filter '
+		CHANGED=""
+
+		if [ "$GIT_COMMITTER_NAME" == "`echo $SEARCH_NAME`" ]
+		then
+			CHANGED="committer $GIT_COMMITTER_NAME"
+
+			export GIT_COMMITTER_NAME="$NEW_NAME"
+			export GIT_COMMITTER_EMAIL="$NEW_EMAIL"
+		fi
+
+		if [ "$GIT_AUTHOR_NAME" == "`echo $SEARCH_NAME`" ]
+		then
+			if [ -n "$CHANGED" ]
+			then
+				CHANGED=" $GIT_AUTHOR_NAME"
+			else
+				CHANGED="author $GIT_AUTHOR_NAME"
+			fi
+
+			export GIT_AUTHOR_NAME="$NEW_NAME"
+			export GIT_AUTHOR_EMAIL="$NEW_EMAIL"
+		fi
+
+		if [ -n "$CHANGED" ]
+		then
+			echo " $CHANGED -> $NEW_NAME <$NEW_EMAIL>"
+		fi
+	' $@
+
+elif [ -n "$SEARCH_EMAIL" ]
+then
+	git filter-branch --env-filter '
+		CHANGED=""
+
+		if [ "$GIT_COMMITTER_EMAIL" == "`echo $SEARCH_EMAIL`" ]
+		then
+			CHANGED="committer $GIT_COMMITTER_EMAIL"
+
+			export GIT_COMMITTER_NAME="$NEW_NAME"
+			export GIT_COMMITTER_EMAIL="$NEW_EMAIL"
+		fi
+
+		if [ "$GIT_AUTHOR_EMAIL" == "`echo $SEARCH_EMAIL`" ]
+		then
+			if [ -n "$CHANGED" ]
+			then
+				CHANGED=" $GIT_AUTHOR_EMAIL"
+			else
+				CHANGED="author $GIT_AUTHOR_EMAIL"
+			fi
+
+			export GIT_AUTHOR_NAME="$NEW_NAME"
+			export GIT_AUTHOR_EMAIL="$NEW_EMAIL"
+		fi
+
+		if [ -n "$CHANGED" ]
+		then
+			echo " $CHANGED -> $NEW_NAME <$NEW_EMAIL>"
+		fi
+	' $@
+
+else
+	echo "error: No mode specified - nothing to do." >&2
+	exit 1
+fi
