@@ -1,0 +1,83 @@
+#!/bin/sh
+
+# This tool prints out data for a single commit.
+#
+# If no flags are set, this command is equivalent to git log -1, but it may be
+# print as data for setting environment variables, too.
+
+
+#
+# config
+#
+info_mode="log"
+
+
+#
+# get cmd options
+#
+while getopts ":e" opt
+do
+	# do some pre checks
+	case $opt in
+		e) export info_mode="env" ;;
+
+
+		\?)
+			echo "Invalid option: -$OPTARG" >&2
+			exit 1
+		;;
+
+		:)
+			echo "Option -$OPTARG requires an argument." >&2
+			exit 1
+		;;
+	esac
+done
+
+# shift for optional arguments for git filter-branch
+shift $((OPTIND-1))
+
+# get commit ID (first argument after cmd options)
+if [ -z $1 ]
+then
+	echo "No comit set" >&2
+	exit 1
+fi
+commit=$1
+
+
+
+#
+# get data
+#
+case $info_mode in
+	log)
+		git log -1 $commit
+		exit
+	;;
+
+	env)
+		# get data
+		log_message=$(git log -1 $commit)
+		if [ ! $? -eq 0 ]
+		then
+			echo "Could not find given SHA" >&2
+			exit 1
+		fi
+
+		GIT_DATE=$(printf "$log_message" | grep "^Date:" | cut -c 9-)
+		GIT_AUTHOR=$(printf "$log_message" | grep "^Author:" | cut -c 9- | cut -d'<' -f1 | sed 's/[ \t]*$//')
+		GIT_EMAIL=$(printf "$log_message" | grep "^Author:" | cut -c 9- | cut -d'<' -f2 | cut -d'>' -f1)
+
+		# print data
+		echo "export GIT_COMMITTER_DATE=\"$GIT_DATE\""
+		echo "export GIT_COMMITTER_NAME=\"$GIT_AUTHOR\""
+		echo "export GIT_COMMITTER_EMAIL=\"$GIT_EMAIL\""
+		echo "git commit --date=\"$GIT_DATE\" --author=\"$GIT_AUTHOR <$GIT_EMAIL>\""
+	;;
+
+	*)
+		echo "unknown mode $info_mode." >&2
+		exit 1
+	;;
+esac

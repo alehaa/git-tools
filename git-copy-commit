@@ -38,21 +38,14 @@ if [ -z $2 ]
 then
 	# cherry pick
 	git cherry-pick --allow-empty-message $SHA
-
-	if [ $? -eq 0 ]
-	then
-		exit 0
-	fi
+	[ $? -eq 0 ] && exit 0
 else
-	if [ $2 != "info" ]
-	then
-		# cherry pick
-		git cherry-pick --no-commit $SHA
-		git reset HEAD * 2>&1 > /dev/null
+	# cherry pick
+	git cherry-pick --no-commit $SHA
+	git reset HEAD * 2>&1 > /dev/null
 
-		# print git status
-		git status
-	fi
+	# print git status
+	git status
 fi
 
 
