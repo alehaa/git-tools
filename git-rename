@@ -111,7 +111,7 @@ function save_entry () {
 rename_search=""
 NEW_NAME=""
 NEW_EMAIL=""
-while getopts ":f:pcn:m:N:M:" opt; do
+while getopts ":acf:pn:m:N:M:" opt; do
 	# do some pre checks
 	case $opt in
 		f|n|m|N|M)
@@ -143,6 +143,9 @@ while getopts ":f:pcn:m:N:M:" opt; do
 
 		# switch to complete mode
 		c) export rename_complete="yes" ;;
+
+		# user only wants to append data to configuration
+		a) export rename_complete="append" ;;
 
 		# search for name
 		n)
@@ -239,6 +242,14 @@ then
 	echo "  email:    $NEW_EMAIL"
 	echo ""
 
+	# If user wants to append data to configuration only, save config and exit.
+	if [ "$rename_complete" = "append" ]
+	then
+		save_entry
+		exit 0
+	fi
+
+	# Ask user, if he wants to store entry in configuration
 	read -p "Save entry in your repository config? [y/n] " save_in_config
 	if [[ $save_in_config =~ ^[YyJj] ]]
 	then
@@ -253,8 +264,17 @@ then
 	then
 		export rename_file=$(pwd)"/.rename_config"
 		save_entry
+		trap "rm '$rename_file'" EXIT
 	fi
 	export rename_mode="file"
+fi
+
+
+# Test, if rename_file exists. If it does not exists, we can now exit this tool.
+if [ ! -f "$rename_file" ]
+then
+	echo "Rename configuration is empty." >&2
+	exit 1
 fi
 
 
