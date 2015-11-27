@@ -15,11 +15,12 @@ info_mode="log"
 #
 # get cmd options
 #
-while getopts ":e" opt
+while getopts ":es" opt
 do
 	# do some pre checks
 	case $opt in
 		e) export info_mode="env" ;;
+		s) export info_mode="shell" ;;
 
 
 		\?)
@@ -50,6 +51,21 @@ commit=$1
 #
 # get data
 #
+log_message=$(git log -1 $commit)
+if [ ! $? -eq 0 ]
+then
+	echo "Could not find given SHA" >&2
+	exit 1
+fi
+
+GIT_DATE=$(printf "$log_message" | grep "^Date:" | cut -c 9-)
+GIT_AUTHOR=$(printf "$log_message" | grep "^Author:" | cut -c 9- | cut -d'<' -f1 | sed 's/[ \t]*$//')
+GIT_EMAIL=$(printf "$log_message" | grep "^Author:" | cut -c 9- | cut -d'<' -f2 | cut -d'>' -f1)
+
+
+#
+# print data
+#
 case $info_mode in
 	log)
 		git log -1 $commit
@@ -57,24 +73,22 @@ case $info_mode in
 	;;
 
 	env)
-		# get data
-		log_message=$(git log -1 $commit)
-		if [ ! $? -eq 0 ]
-		then
-			echo "Could not find given SHA" >&2
-			exit 1
-		fi
-
-		GIT_DATE=$(printf "$log_message" | grep "^Date:" | cut -c 9-)
-		GIT_AUTHOR=$(printf "$log_message" | grep "^Author:" | cut -c 9- | cut -d'<' -f1 | sed 's/[ \t]*$//')
-		GIT_EMAIL=$(printf "$log_message" | grep "^Author:" | cut -c 9- | cut -d'<' -f2 | cut -d'>' -f1)
-
 		# print data
 		echo "export GIT_COMMITTER_DATE=\"$GIT_DATE\""
 		echo "export GIT_COMMITTER_NAME=\"$GIT_AUTHOR\""
 		echo "export GIT_COMMITTER_EMAIL=\"$GIT_EMAIL\""
 		echo "git commit --date=\"$GIT_DATE\" --author=\"$GIT_AUTHOR <$GIT_EMAIL>\""
 	;;
+
+	shell)
+		printf "sh -c '"
+		printf "export GIT_COMMITTER_DATE=\"$GIT_DATE\";"
+		printf "export GIT_COMMITTER_NAME=\"$GIT_AUTHOR\";"
+		printf "export GIT_COMMITTER_EMAIL=\"$GIT_EMAIL\";"
+		printf "git commit --date=\"\$GIT_COMMITTER_DATE\" --author=\"\$GIT_COMMITTER_NAME <\$GIT_COMMITTER_EMAIL>\""
+		printf "'\n"
+	;;
+
 
 	*)
 		echo "unknown mode $info_mode." >&2
