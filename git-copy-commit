@@ -1,57 +1,68 @@
 #!/bin/sh
+set -e # abort on any error
+
+# This tool copies a whole commit.
+#
+# This tool copies a whole commit, but instead of just cherry-picking it, also
+# the correct author and date will be set in the environment via git info.
 
 
 #
-# get CMD options
+# config
 #
-if [ $# -lt 1 ]
+mode="just-copy"
+
+
+#
+# get cmd options
+#
+while getopts ":en" opt
+do
+	# do some pre checks
+	case $opt in
+		e) export mode="edit" ;;      # edit commit message
+		n) export mode="no-commit" ;; # do not commit
+
+
+		\?)
+			echo "Invalid option: -$OPTARG" >&2
+			exit 1
+		;;
+
+		:)
+			echo "Option -$OPTARG requires an argument." >&2
+			exit 1
+		;;
+	esac
+done
+
+# shift for optional arguments
+shift $((OPTIND-1))
+
+# get commit ID (first argument after cmd options)
+if [ -z $1 ]
 then
-	echo "No SHA givven" >&2
+	echo "No comit set" >&2
 	exit 1
 fi
-SHA=$1
 
+for commit in $@
+do
+	# set environment
+	eval $(git info -e $commit)
 
+	# cherry pick commit
+	case $mode in
+		just-copy) git cherry-pick $commit ;;
+		edit) git cherry-pick --edit $commit ;;
+		no-commit) git cherry-pick --no-commit $commit ;;
+	esac
+done
 
-#
-# get commit data from log
-#
-log_message=$(git log -1 $SHA)
-if [ ! $? -eq 0 ]
+if [ "$mode" = "no-commit" ]
 then
-	echo "Could not find givven SHA" >&2
-	exit 1
+	echo ""
+	echo "you can commit with the following command:"
+	echo ""
+	git info -s $commit
 fi
-
-GIT_DATE=$(printf "$log_message" | grep "^Date:" | cut -c 9-)
-GIT_AUTHOR=$(printf "$log_message" | grep "^Author:" | cut -c 9- | cut -d'<' -f1)
-GIT_EMAIL=$(printf "$log_message" | grep "^Author:" | cut -c 9- | cut -d'<' -f2 | cut -d'>' -f1)
-
-
-# set commit environment
-export GIT_COMMITTER_DATE="$GIT_DATE"
-export GIT_COMMITTER_NAME="$GIT_AUTHOR"
-export GIT_COMMITTER_EMAIL="$GIT_EMAIL"
-
-
-if [ -z $2 ]
-then
-	# cherry pick
-	git cherry-pick --allow-empty-message $SHA
-	[ $? -eq 0 ] && exit 0
-else
-	# cherry pick
-	git cherry-pick --no-commit $SHA
-	git reset HEAD * 2>&1 > /dev/null
-
-	# print git status
-	git status
-fi
-
-
-# print information for commit
-echo ""
-echo "export GIT_COMMITTER_DATE=\"$GIT_DATE\""
-echo "export GIT_COMMITTER_NAME=\"$GIT_AUTHOR\""
-echo "export GIT_COMMITTER_EMAIL=\"$GIT_EMAIL\""
-echo "git commit --date=\"$GIT_DATE\" --author=\"$GIT_AUTHOR <$GIT_EMAIL>\" --allow-empty-message"
