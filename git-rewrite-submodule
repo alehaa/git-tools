@@ -1,0 +1,44 @@
+#!/bin/sh
+
+# This tool rewrites submodule hashes.
+#
+# It can be used to replace one hash of a submodule with another in the history,
+# e.g. when an upstream commit was changed for a pull request.
+#
+# NOTE: This tool uses git filter-branch and WILL REWRITE YOUR HISTORY! Make a
+#   copy before using this tool! Colaborators have to clone your repository new!
+#   If you don't like this behaviour, DON'T USE THIS TOOL!
+#
+
+if [ $# -lt 3 ]
+then
+	echo "Usage: git rewrite-submodule [submodule-path] [search] [replace]"
+	exit 1
+fi
+
+
+# Set all required variables.
+submodule_path=$(dirname $1)
+submodule_name=$(basename $1)
+hash_from=$2
+hash_to=$3
+shift 3
+
+git filter-branch --index-filter '
+	# Get the current hash of the submodule in this commit. If the submodule is
+	# not loaded here, then ignore this commit.
+	current_hash=$(git ls-tree $GIT_COMMIT:'$submodule_path' 2>/dev/null \
+	               | grep '$submodule_name'                              \
+	               | cut -d " " -f 3 | cut -f 1 )
+	if [ -n "$current_hash" ]
+	then
+		# Check if the this revision should be rewritten.
+		if [ "$current_hash" == "'$hash_from'" ]
+		then
+			git update-index --cacheinfo \
+				160000,'$hash_to','$submodule_path'/'$submodule_name'
+		fi
+	fi
+	' \
+	--tag-name-filter cat \
+	$@
