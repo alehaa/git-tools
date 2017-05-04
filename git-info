@@ -10,15 +10,17 @@
 # config
 #
 info_mode="log"
+amend=""
 
 
 #
 # get cmd options
 #
-while getopts ":es" opt
+while getopts ":aes" opt
 do
 	# do some pre checks
 	case $opt in
+		a) export amend=true ;;
 		e) export info_mode="env" ;;
 		s) export info_mode="shell" ;;
 
@@ -41,8 +43,7 @@ shift $((OPTIND-1))
 # get commit ID (first argument after cmd options)
 if [ -z $1 ]
 then
-	echo "No comit set" >&2
-	exit 1
+	commit="HEAD"
 fi
 commit=$1
 
@@ -85,6 +86,12 @@ case $info_mode in
 		printf "export GIT_COMMITTER_NAME=\"$GIT_AUTHOR\";"
 		printf "export GIT_COMMITTER_EMAIL=\"$GIT_EMAIL\";"
 		printf "git commit --date=\"\$GIT_COMMITTER_DATE\" --author=\"\$GIT_COMMITTER_NAME <\$GIT_COMMITTER_EMAIL>\""
+
+		if [ -n "$amend" ]
+		then
+			printf " --amend --no-edit"
+		fi
+
 		printf "'\n"
 	;;
 
