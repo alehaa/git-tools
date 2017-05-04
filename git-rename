@@ -336,4 +336,4 @@ git filter-branch --env-filter '
 			echo " $CHANGED$search -> $name ($email)"
 		fi
 	done < '"$rename_file"'
-' $@
+' --tag-name-filter cat $@
