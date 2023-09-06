@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# This tool rewrites the committer date with the author date or he other way
+# This tool rewrites the committer date with the author date or the other way
 # around.
 #
 # This feature can be used, to rewrite commits which have been commited with a
