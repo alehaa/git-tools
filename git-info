@@ -1,5 +1,13 @@
 #!/bin/sh
 
+# This file is part of git-tools.
+#
+# Copyright (c) Alexander Haase <ahaase@alexhaase.de>
+#
+# This project is licensed under the MIT License. For the full copyright and
+# license information, please view the LICENSE file that was distributed with
+# this source code.
+
 # This tool prints out data for a single commit.
 #
 # If no flags are set, this command is equivalent to git log -1, but it may be

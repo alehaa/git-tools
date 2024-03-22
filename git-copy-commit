@@ -1,11 +1,19 @@
 #!/bin/sh
-set -e # abort on any error
+
+# This file is part of git-tools.
+#
+# Copyright (c) Alexander Haase <ahaase@alexhaase.de>
+#
+# This project is licensed under the MIT License. For the full copyright and
+# license information, please view the LICENSE file that was distributed with
+# this source code.
 
 # This tool copies a whole commit.
 #
 # This tool copies a whole commit, but instead of just cherry-picking it, also
 # the correct author and date will be set in the environment via git info.
 
+set -e  # abort on any error
 
 #
 # config
